@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CivicShield AI — Community Emergency Intelligence</title>
+  <meta name="description" content="CivicShield AI: An AI-powered civic emergency intelligence platform that fuses scattered citizen reports into prioritized, actionable incident intelligence for human responders." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── DESIGN TOKENS ─────────────────────────────────────────────────────── */
+    :root {
+      --bg-base:        #080c14;
+      --bg-surface:     #0d1220;
+      --bg-card:        #111827;
+      --bg-card-hover:  #16202f;
+      --border:         rgba(99,130,190,0.15);
+      --border-bright:  rgba(99,130,190,0.30);
+
+      --text-primary:   #f0f4ff;
+      --text-secondary: #8b9dc0;
+      --text-muted:     #4b5a78;
+
+      --accent:         #3b82f6;
+      --accent-glow:    rgba(59,130,246,0.25);
+      --accent-dim:     rgba(59,130,246,0.12);
+
+      --critical-color: #ff3b30;
+      --critical-bg:    rgba(255,59,48,0.12);
+      --critical-border: rgba(255,59,48,0.35);
+      --critical-glow:  rgba(255,59,48,0.20);
+
+      --high-color:     #ff9500;
+      --high-bg:        rgba(255,149,0,0.10);
+      --high-border:    rgba(255,149,0,0.30);
+
+      --medium-color:   #ffd60a;
+      --medium-bg:      rgba(255,214,10,0.08);
+      --medium-border:  rgba(255,214,10,0.25);
+
+      --low-color:      #30d158;
+      --low-bg:         rgba(48,209,88,0.08);
+      --low-border:     rgba(48,209,88,0.25);
+
+      --fusion-color:   #bf5af2;
+      --fusion-bg:      rgba(191,90,242,0.10);
+      --fusion-border:  rgba(191,90,242,0.35);
+      --fusion-glow:    rgba(191,90,242,0.20);
+
+      --radius-sm:      6px;
+      --radius-md:      12px;
+      --radius-lg:      18px;
+      --radius-xl:      24px;
+
+      --transition:     all 0.2s cubic-bezier(0.4,0,0.2,1);
+      --shadow-card:    0 4px 24px rgba(0,0,0,0.35);
+      --shadow-glow:    0 0 40px rgba(59,130,246,0.15);
+    }
+
+    /* ─── RESET & BASE ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+    input, textarea, select { font-family: inherit; }
+    img { max-width: 100%; display: block; }
+
+    /* ─── SCROLLBAR ─────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+    /* ─── NAVIGATION ────────────────────────────────────────────────────────── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 64px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 1.1rem; letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+    .nav-logo .shield-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-btn {
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      font-size: 0.85rem; font-weight: 500;
+      transition: var(--transition);
+      color: var(--text-secondary);
+      background: transparent;
+    }
+    .nav-btn:hover { color: var(--text-primary); background: var(--bg-card); }
+    .nav-btn.primary {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .nav-btn.primary:hover { background: #2563eb; }
+    .nav-btn.demo-btn {
+      background: var(--fusion-bg);
+      border: 1px solid var(--fusion-border);
+      color: var(--fusion-color);
+    }
+    .nav-btn.demo-btn:hover { background: rgba(191,90,242,0.18); }
+
+    /* ─── PAGE SYSTEM ───────────────────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── LANDING PAGE ──────────────────────────────────────────────────────── */
+    .landing { padding-top: 64px; }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 20%, rgba(59,130,246,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(139,92,246,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 999px;
+      padding: 6px 16px; margin-bottom: 2rem;
+      font-size: 0.8rem; font-weight: 600;
+      color: #93c5fd; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .hero-badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .hero-title {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 900; line-height: 1.05;
+      letter-spacing: -0.04em; margin-bottom: 1.5rem;
+    }
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.15rem; color: var(--text-secondary);
+      max-width: 600px; margin: 0 auto 2.5rem;
+      font-weight: 400; line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex; flex-wrap: wrap; gap: 12px;
+      align-items: center; justify-content: center; margin-bottom: 4rem;
+    }
+    .btn-hero-primary {
+      padding: 14px 28px; border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff; font-weight: 700; font-size: 1rem;
+      box-shadow: 0 0 40px rgba(59,130,246,0.3);
+      transition: var(--transition);
+    }
+    .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(59,130,246,0.4); }
+    .btn-hero-secondary {
+      padding: 14px 28px; border-radius: var(--radius-md);
+      background: var(--bg-card); border: 1px solid var(--border-bright);
+      color: var(--text-primary); font-weight: 600; font-size: 1rem;
+      transition: var(--transition);
+    }
+    .btn-hero-secondary:hover { background: var(--bg-card-hover); border-color: var(--accent); }
+    .btn-hero-demo {
+      padding: 14px 28px; border-radius: var(--radius-md);
+      background: var(--fusion-bg); border: 1px solid var(--fusion-border);
+      color: var(--fusion-color); font-weight: 700; font-size: 1rem;
+      transition: var(--transition);
+    }
+    .btn-hero-demo:hover { background: rgba(191,90,242,0.18); transform: translateY(-2px); }
+
+    /* Flow diagram */
+    .hero-flow {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap; justify-content: center;
+      font-size: 0.8rem; color: var(--text-muted);
+    }
+    .flow-step {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 6px 12px;
+      font-weight: 500; color: var(--text-secondary);
+    }
+    .flow-step.highlight { border-color: var(--fusion-border); color: var(--fusion-color); background: var(--fusion-bg); }
+    .flow-arrow { color: var(--text-muted); font-size: 1rem; }
+
+    /* Feature grid */
+    .features {
+      padding: 5rem 2rem;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .section-label {
+      text-align: center; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 1rem;
+    }
+    .section-title {
+      text-align: center; font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800; letter-spacing: -0.03em; margin-bottom: 1rem;
+    }
+    .section-sub {
+      text-align: center; color: var(--text-secondary);
+      max-width: 500px; margin: 0 auto 3rem;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 2rem;
+      transition: var(--transition);
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 60%, var(--card-glow, transparent) 100%);
+      opacity: 0; transition: var(--transition);
+    }
+    .feature-card:hover { border-color: var(--border-bright); transform: translateY(-4px); box-shadow: var(--shadow-card); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 1.2rem;
+    }
+    .feature-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .feature-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+
+    /* Impact flow */
+    .impact {
+      padding: 5rem 2rem;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .impact-inner { max-width: 800px; margin: 0 auto; text-align: center; }
+    .impact-flow {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      align-items: center; gap: 8px; margin: 2.5rem 0;
+    }
+    .impact-step {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 12px 20px;
+      font-weight: 600; font-size: 0.9rem;
+    }
+    .impact-step.key { border-color: var(--fusion-border); color: var(--fusion-color); background: var(--fusion-bg); }
+    .impact-arrow { font-size: 1.4rem; color: var(--text-muted); }
+    .impact-quote {
+      font-size: 1.1rem; color: var(--text-secondary); font-style: italic;
+      line-height: 1.7; margin-bottom: 1rem;
+    }
+
+    /* Responsible AI */
+    .responsible {
+      padding: 4rem 2rem; max-width: 800px; margin: 0 auto;
+    }
+    .ai-disclaimer {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-md); padding: 1.5rem;
+    }
+    .ai-disclaimer h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--accent); }
+    .ai-disclaimer p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; }
+
+    /* ─── REPORT PAGE ───────────────────────────────────────────────────────── */
+    .report-page { padding-top: 64px; min-height: 100vh; }
+    .report-container {
+      max-width: 700px; margin: 0 auto; padding: 3rem 2rem;
+    }
+    .page-header { margin-bottom: 2.5rem; }
+    .page-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    .page-header p { color: var(--text-secondary); }
+
+    .report-form {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2.5rem;
+    }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-label {
+      display: block; font-size: 0.85rem; font-weight: 600;
+      color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.02em;
+    }
+    .form-label .required { color: var(--critical-color); }
+    .form-input, .form-textarea, .form-select {
+      width: 100%; background: var(--bg-surface);
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      padding: 12px 16px; color: var(--text-primary);
+      font-size: 0.95rem; transition: var(--transition);
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+    .form-textarea { resize: vertical; min-height: 120px; }
+    .form-select option { background: var(--bg-card); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+    .submit-btn {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: #fff; font-size: 1rem; font-weight: 700;
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 30px rgba(220,38,38,0.3);
+      transition: var(--transition); display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(220,38,38,0.4); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* Analysis result */
+    .analysis-result {
+      margin-top: 2rem; display: none;
+    }
+    .analysis-result.visible { display: block; animation: slideUp 0.4s ease; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .analysis-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .analysis-header {
+      padding: 1.2rem 1.5rem;
+      background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.05));
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .analysis-header h3 { font-size: 0.95rem; font-weight: 700; }
+    .analysis-body { padding: 1.5rem; }
+
+    .priority-display {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .priority-score-big {
+      width: 80px; height: 80px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 1.5rem; flex-shrink: 0;
+      border: 3px solid;
+    }
+    .priority-score-big .label { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.05em; }
+    .priority-meta { flex: 1; }
+    .priority-meta h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .priority-meta p { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .meta-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.2rem; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em;
+    }
+    .badge.critical { background: var(--critical-bg); border: 1px solid var(--critical-border); color: var(--critical-color); }
+    .badge.high { background: var(--high-bg); border: 1px solid var(--high-border); color: var(--high-color); }
+    .badge.medium { background: var(--medium-bg); border: 1px solid var(--medium-border); color: var(--medium-color); }
+    .badge.low { background: var(--low-bg); border: 1px solid var(--low-border); color: var(--low-color); }
+    .badge.blue { background: var(--accent-dim); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+    .badge.purple { background: var(--fusion-bg); border: 1px solid var(--fusion-border); color: var(--fusion-color); }
+
+    .analysis-section { margin-bottom: 1.2rem; }
+    .analysis-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .analysis-section p { font-size: 0.9rem; color: var(--text-secondary); }
+    .actions-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .actions-list li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 0.88rem; color: var(--text-secondary);
+    }
+    .actions-list li::before { content: '→'; color: var(--accent); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+    .ai-disclaimer-badge {
+      margin-top: 1.2rem; padding: 10px 14px;
+      background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .fusion-notice {
+      margin-top: 1.2rem; padding: 1rem 1.2rem;
+      background: var(--fusion-bg); border: 1px solid var(--fusion-border);
+      border-radius: var(--radius-md);
+    }
+    .fusion-notice h4 { color: var(--fusion-color); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 6px; }
+    .fusion-notice p { font-size: 0.83rem; color: var(--text-secondary); }
+
+    /* Processing state */
+    .processing-state {
+      text-align: center; padding: 2rem;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); margin-top: 2rem; display: none;
+    }
+    .processing-state.visible { display: block; animation: slideUp 0.3s ease; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── COMMAND DASHBOARD ─────────────────────────────────────────────────── */
+    .dashboard-page { padding-top: 64px; min-height: 100vh; }
+    .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .dashboard-header {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;
+    }
+    .dashboard-title-group h1 {
+      font-size: 1.8rem; font-weight: 900; letter-spacing: -0.03em;
+    }
+    .dashboard-title-group p { color: var(--text-secondary); font-size: 0.9rem; }
+    .dashboard-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .dash-btn {
+      padding: 10px 18px; border-radius: var(--radius-sm);
+      font-size: 0.85rem; font-weight: 600; transition: var(--transition);
+    }
+    .dash-btn.refresh-btn {
+      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
+    }
+    .dash-btn.refresh-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+    .dash-btn.demo-btn {
+      background: var(--fusion-bg); border: 1px solid var(--fusion-border); color: var(--fusion-color);
+    }
+    .dash-btn.demo-btn:hover { background: rgba(191,90,242,0.18); }
+    .dash-btn.report-btn {
+      background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff;
+      box-shadow: 0 0 20px rgba(220,38,38,0.25);
+    }
+    .dash-btn.report-btn:hover { transform: translateY(-1px); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.2rem 1.5rem;
+      transition: var(--transition);
+    }
+    .stat-card:hover { border-color: var(--border-bright); }
+    .stat-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .stat-value { font-size: 2rem; font-weight: 900; letter-spacing: -0.04em; }
+    .stat-card.critical .stat-value { color: var(--critical-color); }
+    .stat-card.high .stat-value { color: var(--high-color); }
+    .stat-card.fusion .stat-value { color: var(--fusion-color); }
+    .stat-card.accent .stat-value { color: var(--accent); }
+
+    /* Incidents grid */
+    .incidents-section { }
+    .incidents-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.2rem;
+    }
+    .incidents-header h2 { font-size: 1rem; font-weight: 700; }
+    .filter-tabs { display: flex; gap: 4px; }
+    .filter-tab {
+      padding: 6px 14px; border-radius: var(--radius-sm);
+      font-size: 0.78rem; font-weight: 600;
+      background: transparent; color: var(--text-muted);
+      border: 1px solid transparent; transition: var(--transition);
+    }
+    .filter-tab:hover { color: var(--text-primary); background: var(--bg-card); }
+    .filter-tab.active { background: var(--bg-card); border-color: var(--border-bright); color: var(--text-primary); }
+
+    .incidents-grid {
+      display: grid; gap: 1.2rem;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    }
+    @media (max-width: 800px) { .incidents-grid { grid-template-columns: 1fr; } }
+
+    .empty-state {
+      grid-column: 1/-1; text-align: center;
+      padding: 5rem 2rem; color: var(--text-muted);
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary); }
+
+    /* Incident card */
+    .incident-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      transition: var(--transition); position: relative;
+    }
+    .incident-card:hover { border-color: var(--border-bright); transform: translateY(-2px); box-shadow: var(--shadow-card); }
+    .incident-card.critical-card { border-color: var(--critical-border); box-shadow: 0 0 20px var(--critical-glow); }
+    .incident-card.unified-card { border-color: var(--fusion-border); box-shadow: 0 0 20px var(--fusion-glow); }
+
+    .card-priority-bar {
+      height: 4px;
+      background: linear-gradient(90deg, var(--bar-start), var(--bar-end));
+    }
+    .card-header {
+      padding: 1.2rem 1.2rem 0.8rem;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+    }
+    .card-title-group { flex: 1; }
+    .card-incident-type {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.3rem;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; line-height: 1.3; }
+    .card-location { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; display: flex; align-items: center; gap: 4px; }
+
+    .priority-circle {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 2px solid; flex-shrink: 0;
+    }
+    .priority-circle .num { font-size: 1.1rem; font-weight: 900; line-height: 1; }
+    .priority-circle .denom { font-size: 0.55rem; color: var(--text-muted); }
+
+    .card-badges { padding: 0 1.2rem 0.8rem; display: flex; flex-wrap: wrap; gap: 6px; }
+    .card-body { padding: 0 1.2rem 1.2rem; }
+    .card-summary { font-size: 0.87rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6; }
+
+    .unified-banner {
+      background: var(--fusion-bg); border: 1px solid var(--fusion-border);
+      border-radius: var(--radius-sm); padding: 8px 12px;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 6px;
+    }
+    .unified-banner .ub-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--fusion-color);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .unified-banner .ub-stats { display: flex; gap: 12px; }
+    .unified-banner .ub-stat { font-size: 0.78rem; color: var(--text-secondary); }
+    .unified-banner .ub-stat strong { color: var(--fusion-color); }
+
+    .card-actions-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .card-actions-list { display: flex; flex-direction: column; gap: 4px; }
+    .card-action-item { font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 6px; }
+    .card-action-item::before { content: '→'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+
+    .card-footer {
+      border-top: 1px solid var(--border); padding: 0.8rem 1.2rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-time { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .card-disclaimer { font-size: 0.68rem; color: var(--text-muted); font-style: italic; }
+    .card-reporter { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Why high priority panel */
+    .why-priority {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 1rem;
+    }
+    .why-priority-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .why-priority p { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+
+    /* ─── TOAST ─────────────────────────────────────────────────────────────── */
+    .toast-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 14px 18px;
+      box-shadow: var(--shadow-card); min-width: 280px; max-width: 360px;
+      display: flex; align-items: flex-start; gap: 10px;
+      animation: toastIn 0.3s ease;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+    .toast.success { border-left: 4px solid var(--low-color); }
+    .toast.error { border-left: 4px solid var(--critical-color); }
+    .toast.info { border-left: 4px solid var(--accent); }
+    .toast.fusion { border-left: 4px solid var(--fusion-color); }
+    .toast-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .toast-text { flex: 1; }
+    .toast-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
+    .toast-msg { font-size: 0.8rem; color: var(--text-secondary); }
+
+    /* ─── DEMO OVERLAY ──────────────────────────────────────────────────────── */
+    .demo-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(8,12,20,0.95);
+      backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center;
+      display: none;
+    }
+    .demo-overlay.visible { display: flex; }
+    .demo-modal {
+      background: var(--bg-card); border: 1px solid var(--fusion-border);
+      border-radius: var(--radius-xl); padding: 2.5rem;
+      max-width: 500px; width: 90%; box-shadow: 0 0 60px var(--fusion-glow);
+      text-align: center;
+    }
+    .demo-modal h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .demo-modal p { color: var(--text-secondary); margin-bottom: 1.5rem; }
+    .demo-progress { background: var(--bg-surface); border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 1rem; }
+    .demo-progress-bar {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, #3b82f6, #bf5af2);
+      transition: width 0.4s ease; width: 0%;
+    }
+    .demo-step-text { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* ─── LOADING OVERLAY ───────────────────────────────────────────────────── */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(8,12,20,0.7);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      display: none;
+    }
+    .loading-overlay.visible { display: flex; }
+    .loading-box { text-align: center; }
+    .loading-spinner {
+      width: 56px; height: 56px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    /* ─── UTILITY ───────────────────────────────────────────────────────────── */
+    .text-critical { color: var(--critical-color); }
+    .text-high { color: var(--high-color); }
+    .text-medium { color: var(--medium-color); }
+    .text-low { color: var(--low-color); }
+    .text-fusion { color: var(--fusion-color); }
+    .hidden { display: none !important; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem; text-align: center;
+      color: var(--text-muted); font-size: 0.82rem;
+    }
+    .footer strong { color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVIGATION ──────────────────────────────────────────────────────────── -->
+<nav class="nav" id="nav">
+  <div class="nav-logo">
+    <div class="shield-icon">🛡️</div>
+    CivicShield AI
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="showPage('landing')">Home</button>
+    <button class="nav-btn" onclick="showPage('report')">📋 Report</button>
+    <button class="nav-btn" onclick="showPage('dashboard')">🛰 Dashboard</button>
+    <button class="nav-btn demo-btn" onclick="runDemo()">🎬 Demo</button>
+    <button class="nav-btn primary" onclick="showPage('report')">🚨 Report Now</button>
+  </div>
+</nav>
+
+<!-- ── LANDING PAGE ────────────────────────────────────────────────────────── -->
+<div class="page active" id="page-landing">
+  <div class="landing">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge"><span class="dot"></span>AI for Better Living &amp; Smarter Communities</div>
+      <h1 class="hero-title">
+        <span class="gradient-text">CivicShield AI</span>
+      </h1>
+      <p style="font-size:1.3rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.8rem;">
+        From scattered citizen reports to coordinated emergency intelligence.
+      </p>
+      <p class="hero-sub">
+        An AI-powered community emergency intelligence platform that analyzes, prioritizes,
+        and fuses citizen reports to help human responders understand what matters most.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-hero-primary" onclick="showPage('report')">🚨 Report an Incident</button>
+        <button class="btn-hero-secondary" onclick="showPage('dashboard')">🛰 Open Command Center</button>
+        <button class="btn-hero-demo" onclick="runDemo()">🎬 Try Demo</button>
+      </div>
+      <div class="hero-flow">
+        <span class="flow-step">Scattered Reports</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">AI Analysis</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step highlight">⚡ Incident Fusion</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">Priority Score</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">Human Response</span>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+      <p class="section-label">Core Capabilities</p>
+      <h2 class="section-title">Why CivicShield AI?</h2>
+      <p class="section-sub">Every emergency produces information. The challenge is turning that information into understanding.</p>
+      <div class="feature-grid">
+        <div class="feature-card" style="--card-glow: rgba(59,130,246,0.1)">
+          <div class="feature-icon" style="background:rgba(59,130,246,0.1)">🧠</div>
+          <div class="feature-title">AI Incident Intelligence</div>
+          <div class="feature-desc">Gemini AI analyzes every citizen report and extracts incident type, severity, risk level, and an explainable priority score from 0–100.</div>
+        </div>
+        <div class="feature-card" style="--card-glow: rgba(191,90,242,0.1)">
+          <div class="feature-icon" style="background:rgba(191,90,242,0.1)">⚡</div>
+          <div class="feature-title">Incident Fusion Engine</div>
+          <div class="feature-desc">Multiple citizen reports about the same emergency are automatically detected and fused into a single unified incident — eliminating duplicate noise.</div>
+        </div>
+        <div class="feature-card" style="--card-glow: rgba(255,149,0,0.08)">
+          <div class="feature-icon" style="background:rgba(255,149,0,0.08)">📊</div>
+          <div class="feature-title">Explainable Priority</div>
+          <div class="feature-desc">Every priority score comes with a human-readable explanation. No mysterious black-box AI — responders understand exactly why an incident is ranked high.</div>
+        </div>
+        <div class="feature-card" style="--card-glow: rgba(48,209,88,0.08)">
+          <div class="feature-icon" style="background:rgba(48,209,88,0.08)">🌍</div>
+          <div class="feature-title">Community Reporting</div>
+          <div class="feature-desc">Any citizen can submit a report in seconds. The platform aggregates these reports and transforms raw information into actionable emergency intelligence.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Impact -->
+    <section class="impact">
+      <div class="impact-inner">
+        <p class="section-label">The Problem We Solve</p>
+        <h2 class="section-title">Information exists. Understanding doesn't.</h2>
+        <p class="impact-quote">
+          "Communities do not simply lack emergency information. They lack a system that can transform
+          scattered citizen information into one clear, prioritized, explainable picture of what is happening."
+        </p>
+        <div class="impact-flow">
+          <div class="impact-step">📱 Citizen Report 1</div>
+          <div class="impact-arrow">+</div>
+          <div class="impact-step">📱 Citizen Report 2</div>
+          <div class="impact-arrow">+</div>
+          <div class="impact-step">📱 Citizen Report 3</div>
+          <div class="impact-arrow">→</div>
+          <div class="impact-step key">⚡ Fused Intelligence</div>
+          <div class="impact-arrow">→</div>
+          <div class="impact-step">🚒 Human Response</div>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">
+          CivicShield AI doesn't just collect emergency reports — it turns many fragmented reports into
+          <strong style="color:var(--text-primary)">one prioritized understanding of the emergency.</strong>
+        </p>
+      </div>
+    </section>
+
+    <!-- Responsible AI -->
+    <section class="responsible">
+      <p class="section-label">Responsible AI</p>
+      <div class="ai-disclaimer">
+        <h3>🛡️ Decision Support, Not Autonomous Action</h3>
+        <p>
+          CivicShield AI provides decision-support intelligence for human emergency responders.
+          AI outputs are recommendations only and must be verified by authorized human personnel
+          before any emergency action is taken. CivicShield AI does not autonomously dispatch
+          police, fire, or medical services, and does not replace emergency communication systems.
+          Always call your local emergency number (e.g., 112 / 911) in a life-threatening situation.
+        </p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <strong>CivicShield AI</strong> — Built for PromptWars: AI for Better Living &amp; Smarter Communities<br/>
+      Prototype decision-support system · AI outputs require human verification
+    </footer>
+  </div>
+</div>
+
+<!-- ── REPORT PAGE ──────────────────────────────────────────────────────────── -->
+<div class="page" id="page-report">
+  <div class="report-page">
+    <div class="report-container">
+      <div class="page-header">
+        <h1>🚨 Report an Incident</h1>
+        <p>Help your community respond faster. Your report goes directly to CivicShield AI for analysis.</p>
+      </div>
+
+      <div class="report-form">
+        <form id="reportForm" onsubmit="submitReport(event)">
+          <div class="form-group">
+            <label class="form-label" for="description">Incident Description <span class="required">*</span></label>
+            <textarea
+              id="description" name="description" class="form-textarea" required
+              placeholder="Describe what you see. E.g.: Heavy smoke reported near Government School. Several people are leaving the area."
+              rows="5"
+            ></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="location">Location <span class="required">*</span></label>
+              <input type="text" id="location" name="location" class="form-input" required placeholder="E.g.: Zone A, near Government School" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="category">Incident Type</label>
+              <select id="category" name="category" class="form-select">
+                <option value="">Select type (optional)</option>
+                <option value="Fire">🔥 Fire</option>
+                <option value="Medical Emergency">🏥 Medical Emergency</option>
+                <option value="Road Accident">🚗 Road Accident</option>
+                <option value="Flood">🌊 Flood</option>
+                <option value="Crime">🚔 Crime / Public Safety</option>
+                <option value="Infrastructure Failure">⚠️ Infrastructure Failure</option>
+                <option value="Environmental Hazard">☣️ Environmental Hazard</option>
+                <option value="Other">📋 Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reporter_name">Your Name (optional)</label>
+            <input type="text" id="reporter_name" name="reporter_name" class="form-input" placeholder="Anonymous" />
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">
+            🚨 Submit Emergency Report
+          </button>
+        </form>
+
+        <!-- Processing -->
+        <div class="processing-state" id="processingState">
+          <div class="spinner"></div>
+          <p style="font-weight:600; margin-bottom:0.3rem;">Report received. AI is analyzing the incident…</p>
+          <p style="font-size:0.85rem; color:var(--text-muted);">Gemini AI is evaluating the report and checking for related incidents.</p>
+        </div>
+
+        <!-- Analysis result -->
+        <div class="analysis-result" id="analysisResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD PAGE ──────────────────────────────────────────────────────── -->
+<div class="page" id="page-dashboard">
+  <div class="dashboard-page">
+    <div class="dashboard-container">
+      <div class="dashboard-header">
+        <div class="dashboard-title-group">
+          <h1>🚨 CivicShield Command Center</h1>
+          <p>Live community emergency intelligence — AI-assisted, human-verified</p>
+        </div>
+        <div class="dashboard-actions">
+          <button class="dash-btn refresh-btn" onclick="loadDashboard()">🔄 Refresh</button>
+          <button class="dash-btn demo-btn" onclick="runDemo()">🎬 Load Demo</button>
+          <button class="dash-btn report-btn" onclick="showPage('report')">🚨 New Report</button>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-card"><div class="stat-label">Active Incidents</div><div class="stat-value" id="statActive">—</div></div>
+        <div class="stat-card critical"><div class="stat-label">Critical</div><div class="stat-value" id="statCritical">—</div></div>
+        <div class="stat-card high"><div class="stat-label">High Priority</div><div class="stat-value" id="statHigh">—</div></div>
+        <div class="stat-card accent"><div class="stat-label">Reports Received</div><div class="stat-value" id="statReports">—</div></div>
+        <div class="stat-card fusion"><div class="stat-label">Fused Reports</div><div class="stat-value" id="statFused">—</div></div>
+      </div>
+
+      <!-- Incidents -->
+      <div class="incidents-section">
+        <div class="incidents-header">
+          <h2>Active Incidents</h2>
+          <div class="filter-tabs">
+            <button class="filter-tab active" onclick="filterIncidents('all', this)">All</button>
+            <button class="filter-tab" onclick="filterIncidents('critical', this)">Critical</button>
+            <button class="filter-tab" onclick="filterIncidents('unified', this)">⚡ Fused</button>
+          </div>
+        </div>
+        <div class="incidents-grid" id="incidentsGrid">
+          <div class="empty-state">
+            <div class="empty-icon">📡</div>
+            <h3>No incidents yet</h3>
+            <p>Submit a citizen report or load the demo scenario to get started.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DEMO OVERLAY ────────────────────────────────────────────────────────── -->
+<div class="demo-overlay" id="demoOverlay">
+  <div class="demo-modal">
+    <div style="font-size:2.5rem; margin-bottom:1rem;">🎬</div>
+    <h2>Loading Demo Scenario</h2>
+    <p id="demoModalDesc">Processing 5 citizen reports through AI analysis and Incident Fusion…</p>
+    <div class="demo-progress"><div class="demo-progress-bar" id="demoProgressBar"></div></div>
+    <div class="demo-step-text" id="demoStepText">Initializing…</div>
+  </div>
+</div>
+
+<!-- ── LOADING OVERLAY ─────────────────────────────────────────────────────── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <p style="color:var(--text-secondary);">Processing…</p>
+  </div>
+</div>
+
+<!-- ── TOAST ───────────────────────────────────────────────────────────────── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── JAVASCRIPT ──────────────────────────────────────────────────────────── -->
+<script>
+  const API = 'http://localhost:8000';
+
+  // ── PAGE ROUTING ──────────────────────────────────────────────────────────
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (name === 'dashboard') loadDashboard();
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  function toast(type, title, msg) {
+    const icons = { success: '✅', error: '❌', info: 'ℹ️', fusion: '⚡' };
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `
+      <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
+      <div class="toast-text">
+        <div class="toast-title">${title}</div>
+        ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+      </div>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  // ── SEVERITY HELPERS ─────────────────────────────────────────────────────
+  function severityClass(s) {
+    const m = { critical: 'critical', high: 'high', medium: 'medium', low: 'low' };
+    return m[(s||'').toLowerCase()] || 'low';
+  }
+  function priorityColors(score) {
+    if (score >= 80) return { color: 'var(--critical-color)', barStart: '#ff3b30', barEnd: '#ff6b35' };
+    if (score >= 60) return { color: 'var(--high-color)',     barStart: '#ff9500', barEnd: '#ffcc00' };
+    if (score >= 40) return { color: 'var(--medium-color)',   barStart: '#ffd60a', barEnd: '#ff9500' };
+    return { color: 'var(--low-color)', barStart: '#30d158', barEnd: '#34c759' };
+  }
+  function formatTime(ts) {
+    try { return new Date(ts).toLocaleString(); } catch { return ts; }
+  }
+
+  // ── REPORT FORM SUBMISSION ────────────────────────────────────────────────
+  async function submitReport(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = document.getElementById('submitBtn');
+    const proc = document.getElementById('processingState');
+    const res  = document.getElementById('analysisResult');
+
+    const payload = {
+      description:   form.description.value.trim(),
+      location:      form.location.value.trim(),
+      reporter_name: form.reporter_name.value.trim() || 'Anonymous',
+      category:      form.category.value || null,
+    };
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Analyzing…';
+    proc.classList.add('visible');
+    res.classList.remove('visible');
+    res.innerHTML = '';
+
+    try {
+      const r = await fetch(`${API}/incidents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      const data = await r.json();
+
+      proc.classList.remove('visible');
+      renderAnalysisResult(res, data);
+      res.classList.add('visible');
+
+      if (data.fusion && data.fusion.relationship !== 'unrelated') {
+        toast('fusion', '⚡ Incident Fusion Detected', `This report was linked to an existing incident (${Math.round(data.fusion.confidence * 100)}% confidence).`);
+      } else {
+        toast('success', 'Report Submitted', 'AI analysis complete. See results below.');
+      }
+
+      form.reset();
+    } catch (err) {
+      proc.classList.remove('visible');
+      toast('error', 'Submission Failed', err.message);
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🚨 Submit Emergency Report';
+    }
+  }
+
+  function renderAnalysisResult(container, data) {
+    const a = data.analysis || {};
+    const score = a.priority_score || 0;
+    const sc = severityClass(a.severity);
+    const pc = priorityColors(score);
+    const isFallback = a._fallback;
+
+    const actions = (a.recommended_actions || []).map(ac =>
+      `<li>${ac}</li>`
+    ).join('');
+
+    const fusionHtml = data.fusion && data.fusion.relationship !== 'unrelated' ? `
+      <div class="fusion-notice">
+        <h4>⚡ Incident Fusion Detected</h4>
+        <p>
+          This report has been linked to an existing incident
+          (confidence: <strong style="color:var(--fusion-color)">${Math.round(data.fusion.confidence * 100)}%</strong>).<br/>
+          ${data.fusion.reason}
+        </p>
+      </div>` : '';
+
+    container.innerHTML = `
+      <div class="analysis-card">
+        <div class="analysis-header">
+          <h3>🧠 AI Analysis Result</h3>
+          ${isFallback ? '<span class="badge medium">📶 Fallback Mode</span>' : '<span class="badge blue">✨ Gemini AI</span>'}
+        </div>
+        <div class="analysis-body">
+          <div class="priority-display">
+            <div class="priority-score-big" style="color:${pc.color}; border-color:${pc.color}; box-shadow: 0 0 20px ${pc.color}33">
+              <span>${score}</span>
+              <span class="label">/100</span>
+            </div>
+            <div class="priority-meta">
+              <h4>${a.incident_type || 'Incident'}</h4>
+              <p>${a.summary || ''}</p>
+            </div>
+          </div>
+
+          <div class="meta-badges">
+            <span class="badge ${sc}">⚠️ ${a.severity || 'Unknown'}</span>
+            <span class="badge ${severityClass(a.risk_level)}">🎯 Risk: ${a.risk_level || 'Unknown'}</span>
+            <span class="badge ${severityClass(a.vulnerable_population_risk)}">👥 Vulnerable: ${a.vulnerable_population_risk || 'Unknown'}</span>
+          </div>
+
+          <div class="why-priority">
+            <div class="why-priority-title">📊 Why this priority score?</div>
+            <p>${a.reason || 'No reasoning provided.'}</p>
+          </div>
+
+          <div class="analysis-section">
+            <div class="analysis-section-title">Recommended Actions</div>
+            <ul class="actions-list">${actions}</ul>
+          </div>
+
+          ${fusionHtml}
+
+          <div class="ai-disclaimer-badge">
+            🛡️ AI-generated recommendation — human verification required. Not a substitute for emergency services.
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── DASHBOARD ─────────────────────────────────────────────────────────────
+  let allIncidents = [];
+  let currentFilter = 'all';
+
+  async function loadDashboard() {
+    try {
+      const [statsRes, incRes] = await Promise.all([
+        fetch(`${API}/dashboard/stats`),
+        fetch(`${API}/incidents`),
+      ]);
+      const stats = await statsRes.json();
+      const { incidents } = await incRes.json();
+      allIncidents = incidents;
+
+      document.getElementById('statActive').textContent   = stats.active_incidents;
+      document.getElementById('statCritical').textContent = stats.critical;
+      document.getElementById('statHigh').textContent     = stats.high_priority;
+      document.getElementById('statReports').textContent  = stats.reports_received;
+      document.getElementById('statFused').textContent    = stats.fused_reports;
+
+      renderIncidents(currentFilter);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      toast('error', 'Connection Error', 'Could not reach CivicShield backend.');
+    }
+  }
+
+  function filterIncidents(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderIncidents(filter);
+  }
+
+  function renderIncidents(filter) {
+    const grid = document.getElementById('incidentsGrid');
+    // Only show top-level incidents (not sub-reports that were fused)
+    let visible = allIncidents.filter(i => !i.fused_with);
+
+    if (filter === 'critical') {
+      visible = visible.filter(i => i.analysis && i.analysis.severity?.toLowerCase() === 'critical');
+    } else if (filter === 'unified') {
+      visible = visible.filter(i => i.is_unified);
+    }
+
+    if (!visible.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📡</div>
+          <h3>No ${filter === 'all' ? '' : filter + ' '}incidents</h3>
+          <p>Submit a citizen report or load the demo scenario to get started.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = visible.map(inc => renderIncidentCard(inc)).join('');
+  }
+
+  function renderIncidentCard(inc) {
+    const a = inc.analysis || {};
+    const score = a.priority_score || 0;
+    const sc = severityClass(a.severity);
+    const pc = priorityColors(score);
+    const isUnified = inc.is_unified;
+    const supportCount = (inc.supporting_reports || []).length;
+    const totalReports = isUnified ? supportCount + 1 : 1;
+
+    const actions = (a.recommended_actions || []).slice(0, 3).map(ac =>
+      `<div class="card-action-item">${ac}</div>`
+    ).join('');
+
+    const unifiedBanner = isUnified ? `
+      <div class="unified-banner">
+        <span class="ub-label">⚡ Possible Unified Incident</span>
+        <div class="ub-stats">
+          <span class="ub-stat"><strong>${totalReports}</strong> reports</span>
+          ${inc.fusion_confidence ? `<span class="ub-stat"><strong>${Math.round(inc.fusion_confidence * 100)}%</strong> confidence</span>` : ''}
+        </div>
+      </div>` : '';
+
+    const fusionReason = isUnified && inc.fusion_reason ? `
+      <div class="why-priority" style="margin-bottom:0.8rem">
+        <div class="why-priority-title">⚡ Fusion Reasoning</div>
+        <p>${inc.fusion_reason}</p>
+      </div>` : '';
+
+    return `
+      <div class="incident-card ${sc === 'critical' ? 'critical-card' : ''} ${isUnified ? 'unified-card' : ''}">
+        <div class="card-priority-bar" style="--bar-start:${pc.barStart}; --bar-end:${pc.barEnd}"></div>
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-incident-type">${a.incident_type || 'Incident'}</div>
+            <div class="card-title">${a.summary ? a.summary.split('.')[0] : inc.description.substring(0, 60) + '…'}</div>
+            <div class="card-location">📍 ${inc.location}</div>
+          </div>
+          <div class="priority-circle" style="color:${pc.color}; border-color:${pc.color}; box-shadow: 0 0 16px ${pc.color}33">
+            <span class="num">${score}</span>
+            <span class="denom">/100</span>
+          </div>
+        </div>
+        <div class="card-badges">
+          <span class="badge ${sc}">⚠️ ${a.severity || 'Unknown'}</span>
+          <span class="badge ${severityClass(a.risk_level)}">🎯 ${a.risk_level || 'Unknown'} Risk</span>
+          <span class="badge ${severityClass(a.vulnerable_population_risk)}">👥 ${a.vulnerable_population_risk || 'N/A'}</span>
+          ${isUnified ? `<span class="badge purple">⚡ Fused · ${totalReports} Reports</span>` : ''}
+        </div>
+        <div class="card-body">
+          ${unifiedBanner}
+          ${fusionReason}
+          <div class="why-priority">
+            <div class="why-priority-title">📊 Why high priority?</div>
+            <p>${a.reason || 'See full analysis for details.'}</p>
+          </div>
+          <div class="card-actions-title">Recommended Actions</div>
+          <div class="card-actions-list">${actions}</div>
+        </div>
+        <div class="card-footer">
+          <div>
+            <div class="card-time">⏱ ${formatTime(inc.timestamp)}</div>
+            <div class="card-reporter">👤 ${inc.reporter_name || 'Anonymous'}</div>
+          </div>
+          <div class="card-disclaimer">AI recommendation · human verification required</div>
+        </div>
+      </div>`;
+  }
+
+  // ── DEMO ─────────────────────────────────────────────────────────────────
+  async function runDemo() {
+    const overlay = document.getElementById('demoOverlay');
+    const bar     = document.getElementById('demoProgressBar');
+    const stepTxt = document.getElementById('demoStepText');
+
+    overlay.classList.add('visible');
+    bar.style.width = '0%';
+
+    const steps = [
+      [10,  'Clearing previous data…'],
+      [25,  'Submitting Report 1: Smoke near Government School…'],
+      [40,  'Submitting Report 2: Fire behind the school building…'],
+      [55,  'Submitting Report 3: Students being evacuated…'],
+      [68,  'Submitting Report 4: Heavy smoke near Zone A school…'],
+      [80,  'Submitting Report 5: Traffic disruption near Zone A…'],
+      [92,  'Running Incident Fusion analysis…'],
+      [100, 'Demo scenario loaded! Opening Command Center…'],
+    ];
+
+    async function animateStep(i) {
+      if (i >= steps.length) return;
+      const [pct, txt] = steps[i];
+      bar.style.width = pct + '%';
+      stepTxt.textContent = txt;
+      await new Promise(r => setTimeout(r, 600));
+      return animateStep(i + 1);
+    }
+
+    // Start animation concurrently with API call
+    const animPromise = animateStep(0);
+    const apiPromise  = fetch(`${API}/demo/load`, { method: 'POST' });
+
+    try {
+      const [, res] = await Promise.all([animPromise, apiPromise]);
+      const data = await res.json();
+      overlay.classList.remove('visible');
+      showPage('dashboard');
+      toast('fusion', '🎬 Demo Loaded!', `${data.reports_processed} reports processed · ${data.stats.fused_reports} fused.`);
+    } catch (err) {
+      overlay.classList.remove('visible');
+      toast('error', 'Demo Failed', err.message);
+    }
+  }
+
+  // ── INIT ─────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    // Auto-load dashboard data in background
+    loadDashboard().catch(() => {});
+  });
+</script>
+</body>
+</html>
